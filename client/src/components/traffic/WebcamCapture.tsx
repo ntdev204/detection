@@ -22,7 +22,9 @@ interface WebcamCaptureTrafficProps {
   onResult: (result: TrafficDetectionResult) => void;
 }
 
-export default function WebcamCaptureTraffic({ onResult }: WebcamCaptureTrafficProps) {
+export default function WebcamCaptureTraffic({
+  onResult,
+}: WebcamCaptureTrafficProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -87,7 +89,9 @@ export default function WebcamCaptureTraffic({ onResult }: WebcamCaptureTrafficP
   const startCamera = useCallback(async () => {
     setError(null);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+      });
       if (videoRef.current) videoRef.current.srcObject = stream;
       setIsActive(true);
     } catch {
@@ -101,7 +105,8 @@ export default function WebcamCaptureTraffic({ onResult }: WebcamCaptureTrafficP
     stream?.getTracks().forEach((t) => t.stop());
     if (videoRef.current) videoRef.current.srcObject = null;
     const canvas = canvasRef.current;
-    if (canvas) canvas.getContext("2d")?.clearRect(0, 0, canvas.width, canvas.height);
+    if (canvas)
+      canvas.getContext("2d")?.clearRect(0, 0, canvas.width, canvas.height);
   }, []);
 
   useEffect(() => {
@@ -110,7 +115,9 @@ export default function WebcamCaptureTraffic({ onResult }: WebcamCaptureTrafficP
     } else {
       if (intervalRef.current) clearInterval(intervalRef.current);
     }
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
   }, [isActive, captureAndSend]);
 
   useEffect(() => () => stopCamera(), [stopCamera]);
@@ -120,18 +127,31 @@ export default function WebcamCaptureTraffic({ onResult }: WebcamCaptureTrafficP
       <div
         className={cn(
           "relative overflow-hidden rounded-xl bg-muted/30 border border-border aspect-video",
-          !isActive && "cursor-pointer hover:bg-muted/50 transition-colors"
+          !isActive && "cursor-pointer hover:bg-muted/50 transition-colors",
         )}
         onClick={!isActive ? startCamera : undefined}
       >
-        <video ref={videoRef} autoPlay playsInline muted className="h-full w-full object-cover [transform:scaleX(-1)]" />
-        <canvas ref={canvasRef} className="absolute inset-0 h-full w-full object-cover" />
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          className="h-full w-full object-cover transform-[scaleX(-1)]"
+        />
+        <canvas
+          ref={canvasRef}
+          className="absolute inset-0 h-full w-full object-cover"
+        />
 
         {/* Idle — click to start */}
         {!isActive && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-background/60 backdrop-blur-sm">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted border border-border">
-              <svg viewBox="0 0 24 24" className="h-6 w-6 text-muted-foreground" fill="currentColor">
+              <svg
+                viewBox="0 0 24 24"
+                className="h-6 w-6 text-muted-foreground"
+                fill="currentColor"
+              >
                 <path d="M4.5 4.5a3 3 0 00-3 3v9a3 3 0 003 3h8.25a3 3 0 003-3v-9a3 3 0 00-3-3H4.5zM18.75 8.25l-2.74 2.37a.75.75 0 000 1.12l2.74 2.37a.75.75 0 001.25-.56V8.81a.75.75 0 00-1.25-.56z" />
               </svg>
             </div>
@@ -147,10 +167,14 @@ export default function WebcamCaptureTraffic({ onResult }: WebcamCaptureTrafficP
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
             >
-              <span className={cn(
-                "h-2 w-2 rounded-full",
-                status === "connected" ? "bg-blue-400 animate-pulse" : "bg-amber-400"
-              )} />
+              <span
+                className={cn(
+                  "h-2 w-2 rounded-full",
+                  status === "connected"
+                    ? "bg-blue-400 animate-pulse"
+                    : "bg-amber-400",
+                )}
+              />
               <span className="text-xs text-white">
                 {status === "connected" ? "Realtime" : "Đang kết nối..."}
               </span>
