@@ -30,7 +30,10 @@ jobs:
           git clone https://ntdev204:${HF_TOKEN}@huggingface.co/spaces/ntdev204/detection hf-space
 
           echo "Syncing server folder..."
-          rsync -av --delete --exclude '.git' server/ hf-space/
+          rsync -av --delete \
+            --exclude '.git' \
+            --exclude '*.pt' \
+            server/ hf-space/
 
           cd hf-space
 
