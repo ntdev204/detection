@@ -12,29 +12,36 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1️⃣ Checkout GitHub repo
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      # 2️⃣ Deploy to HuggingFace
       - name: Deploy to HuggingFace Space
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
+          set -e
+
           git config --global user.email "actions@github.com"
           git config --global user.name "GitHub Actions"
 
-          # Clone Space
+          echo "Cloning HuggingFace Space..."
           git clone https://ntdev204:${HF_TOKEN}@huggingface.co/spaces/ntdev204/detection hf-space
 
-          # Sync server folder to Space root
-          rsync -av --delete server/ hf-space/
+          echo "Syncing server folder..."
+          rsync -av --delete --exclude '.git' server/ hf-space/
 
           cd hf-space
+
+          echo "Checking for changes..."
           git add .
 
-          # Commit only if there are changes
           if ! git diff --cached --quiet; then
-            git commit -m "Auto deploy from GitHub"
-            git push
+            echo "Changes detected. Committing..."
+            git commit -m "Auto deploy from GitHub Actions"
+            git push origin main
+            echo "Deploy success 🚀"
           else
-            echo "No changes to deploy"
+            echo "No changes to deploy."
           fi
