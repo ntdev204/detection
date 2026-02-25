@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import logging
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
@@ -23,7 +24,8 @@ async def detect_human(
         )
     image_bytes = await file.read()
     try:
-        return service.detect_human(image_bytes)
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, service.detect_human, image_bytes)
     except Exception as exc:
         logger.exception("Human detection failed")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -36,19 +38,21 @@ async def human_websocket(
 ) -> None:
     """
     WebSocket endpoint for real-time human detection.
-    Client sends base64-encoded JPEG frames; server responds with JSON
-    including bounding boxes for canvas rendering.
+    Client sends base64-encoded JPEG frames; server responds with JSON.
+    Uses run_in_executor to avoid blocking the event loop during inference.
     """
     await websocket.accept()
     logger.info("Human WebSocket connected")
+    loop = asyncio.get_running_loop()
     try:
         while True:
             data = await websocket.receive_text()
-            # Expected: "data:image/jpeg;base64,<data>" or raw base64
             if "," in data:
                 data = data.split(",", 1)[1]
             image_bytes = base64.b64decode(data)
-            result = service.detect_human(image_bytes)
+            result = await loop.run_in_executor(
+                None, service.detect_human, image_bytes
+            )
             await websocket.send_json(result.model_dump())
     except WebSocketDisconnect:
         logger.info("Human WebSocket disconnected")

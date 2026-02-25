@@ -8,6 +8,8 @@ logger = logging.getLogger(__name__)
 PERSON_CLASS_ID = 0  # COCO class ID for 'person'
 PERSON_CLASS_NAMES = {"person"}
 
+_INFER_SIZE = 640
+
 
 class HumanDetector(BaseDetector):
     """Detects humans using a trained YOLOv8 model (human.pt)."""
@@ -19,7 +21,11 @@ class HumanDetector(BaseDetector):
     def load(self) -> None:
         logger.info("Loading HumanDetector from %s", self._model_path)
         self._model = YOLO(self._model_path)
-        logger.info("HumanDetector loaded successfully")
+        # Warm-up: run a dummy inference to initialize CUDA/CPU kernels
+        import numpy as np
+        dummy = np.zeros((480, 640, 3), dtype=np.uint8)
+        self._model.predict(source=dummy, imgsz=_INFER_SIZE, verbose=False)
+        logger.info("HumanDetector loaded and warmed up")
 
     def detect(self, image_bytes: bytes) -> DetectionResult:
         if self._model is None:
@@ -28,6 +34,7 @@ class HumanDetector(BaseDetector):
         image = self._decode_image(image_bytes)
         results = self._model.predict(
             source=image,
+            imgsz=_INFER_SIZE,
             conf=settings.confidence_threshold,
             iou=settings.iou_threshold,
             verbose=False,

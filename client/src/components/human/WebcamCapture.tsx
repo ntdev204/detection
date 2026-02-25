@@ -69,17 +69,28 @@ export default function WebcamCaptureHuman({ onResult }: WebcamCaptureProps) {
   const captureAndSend = useCallback(() => {
     const video = videoRef.current;
     if (!video || video.readyState < 2) return;
+
+    // Downscale to max 640px for faster transfer & inference
+    const MAX_DIM = 640;
+    const vw = video.videoWidth;
+    const vh = video.videoHeight;
+    const ratio = Math.min(1, MAX_DIM / Math.max(vw, vh));
+    const tw = Math.round(vw * ratio);
+    const th = Math.round(vh * ratio);
+
     const tmpCanvas = document.createElement("canvas");
-    tmpCanvas.width = video.videoWidth;
-    tmpCanvas.height = video.videoHeight;
-    tmpCanvas.getContext("2d")?.drawImage(video, 0, 0);
-    sendFrame(tmpCanvas.toDataURL("image/jpeg", 0.7));
+    tmpCanvas.width = tw;
+    tmpCanvas.height = th;
+    tmpCanvas.getContext("2d")?.drawImage(video, 0, 0, tw, th);
+    sendFrame(tmpCanvas.toDataURL("image/jpeg", 0.5));
   }, [sendFrame]);
 
   const startCamera = useCallback(async () => {
     setError(null);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user" },
+      });
       if (videoRef.current) videoRef.current.srcObject = stream;
       setIsActive(true);
     } catch {
@@ -93,7 +104,8 @@ export default function WebcamCaptureHuman({ onResult }: WebcamCaptureProps) {
     stream?.getTracks().forEach((t) => t.stop());
     if (videoRef.current) videoRef.current.srcObject = null;
     const canvas = canvasRef.current;
-    if (canvas) canvas.getContext("2d")?.clearRect(0, 0, canvas.width, canvas.height);
+    if (canvas)
+      canvas.getContext("2d")?.clearRect(0, 0, canvas.width, canvas.height);
   }, []);
 
   useEffect(() => {
@@ -103,7 +115,9 @@ export default function WebcamCaptureHuman({ onResult }: WebcamCaptureProps) {
       if (intervalRef.current) clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
   }, [isActive, captureAndSend]);
 
   useEffect(() => () => stopCamera(), [stopCamera]);
@@ -114,18 +128,31 @@ export default function WebcamCaptureHuman({ onResult }: WebcamCaptureProps) {
       <div
         className={cn(
           "relative overflow-hidden rounded-xl bg-muted/30 border border-border aspect-video",
-          !isActive && "cursor-pointer hover:bg-muted/50 transition-colors"
+          !isActive && "cursor-pointer hover:bg-muted/50 transition-colors",
         )}
         onClick={!isActive ? startCamera : undefined}
       >
-        <video ref={videoRef} autoPlay playsInline muted className="h-full w-full object-cover [transform:scaleX(-1)]" />
-        <canvas ref={canvasRef} className="absolute inset-0 h-full w-full object-cover" />
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          className="h-full w-full object-cover transform-[scaleX(-1)]"
+        />
+        <canvas
+          ref={canvasRef}
+          className="absolute inset-0 h-full w-full object-cover"
+        />
 
         {/* Idle state — click to start */}
         {!isActive && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-background/60 backdrop-blur-sm">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted border border-border">
-              <svg viewBox="0 0 24 24" className="h-6 w-6 text-muted-foreground" fill="currentColor">
+              <svg
+                viewBox="0 0 24 24"
+                className="h-6 w-6 text-muted-foreground"
+                fill="currentColor"
+              >
                 <path d="M4.5 4.5a3 3 0 00-3 3v9a3 3 0 003 3h8.25a3 3 0 003-3v-9a3 3 0 00-3-3H4.5zM18.75 8.25l-2.74 2.37a.75.75 0 000 1.12l2.74 2.37a.75.75 0 001.25-.56V8.81a.75.75 0 00-1.25-.56z" />
               </svg>
             </div>
@@ -141,10 +168,14 @@ export default function WebcamCaptureHuman({ onResult }: WebcamCaptureProps) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
             >
-              <span className={cn(
-                "h-2 w-2 rounded-full",
-                status === "connected" ? "bg-emerald-400 animate-pulse" : "bg-amber-400"
-              )} />
+              <span
+                className={cn(
+                  "h-2 w-2 rounded-full",
+                  status === "connected"
+                    ? "bg-emerald-400 animate-pulse"
+                    : "bg-amber-400",
+                )}
+              />
               <span className="text-xs text-white">
                 {status === "connected" ? "Realtime" : "Đang kết nối..."}
               </span>

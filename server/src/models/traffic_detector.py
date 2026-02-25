@@ -8,6 +8,9 @@ logger = logging.getLogger(__name__)
 TRAFFIC_CLASSES = {"car", "motorbike", "motorcycle", "truck", "bus", "person",
                    "bicycle", "van"}
 
+# Inference image size — smaller = faster, 640 is YOLO default
+_INFER_SIZE = 640
+
 
 class TrafficDetector(BaseDetector):
     """Detects traffic objects (vehicles + pedestrians) using traffic.pt."""
@@ -19,7 +22,11 @@ class TrafficDetector(BaseDetector):
     def load(self) -> None:
         logger.info("Loading TrafficDetector from %s", self._model_path)
         self._model = YOLO(self._model_path)
-        logger.info("TrafficDetector loaded successfully")
+        # Warm-up: run a dummy inference to initialize CUDA/CPU kernels
+        import numpy as np
+        dummy = np.zeros((480, 640, 3), dtype=np.uint8)
+        self._model.predict(source=dummy, imgsz=_INFER_SIZE, verbose=False)
+        logger.info("TrafficDetector loaded and warmed up")
 
     def detect(self, image_bytes: bytes) -> DetectionResult:
         if self._model is None:
@@ -28,6 +35,7 @@ class TrafficDetector(BaseDetector):
         image = self._decode_image(image_bytes)
         results = self._model.predict(
             source=image,
+            imgsz=_INFER_SIZE,
             conf=settings.confidence_threshold,
             iou=settings.iou_threshold,
             verbose=False,

@@ -79,11 +79,20 @@ export default function WebcamCaptureTraffic({
   const captureAndSend = useCallback(() => {
     const video = videoRef.current;
     if (!video || video.readyState < 2) return;
+
+    // Downscale to max 640px for faster transfer & inference
+    const MAX_DIM = 640;
+    const vw = video.videoWidth;
+    const vh = video.videoHeight;
+    const ratio = Math.min(1, MAX_DIM / Math.max(vw, vh));
+    const tw = Math.round(vw * ratio);
+    const th = Math.round(vh * ratio);
+
     const tmp = document.createElement("canvas");
-    tmp.width = video.videoWidth;
-    tmp.height = video.videoHeight;
-    tmp.getContext("2d")?.drawImage(video, 0, 0);
-    sendFrame(tmp.toDataURL("image/jpeg", 0.7));
+    tmp.width = tw;
+    tmp.height = th;
+    tmp.getContext("2d")?.drawImage(video, 0, 0, tw, th);
+    sendFrame(tmp.toDataURL("image/jpeg", 0.5));
   }, [sendFrame]);
 
   const startCamera = useCallback(async () => {
